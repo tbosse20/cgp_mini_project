@@ -1,4 +1,5 @@
 // https://lexdev.net/tutorials/case_studies/overwatch_shield.html
+// https://gamedevbill.com/paper-burn-shader-in-unity/
 
 Shader "Unlit/Bomb" {
     Properties {
@@ -6,9 +7,11 @@ Shader "Unlit/Bomb" {
         _IntersectColor ("Intersect color", Color) = (0, 0, .7, 1)
         _IntersectColor2 ("Intersect color", Color) = (0, 0, .7, 1)
         _Height ("Height", range(0, 25)) = 15.0
+        _Intensity ("Intensity", range(0, 25)) = 15.0
         _FadeLength ("Fade length", float) = 10.0
         [NoScaleOffset] _PulseTex("Hex Pulse Texture", 2D) = "white" {}
         [NoScaleOffset] _LineTex("Line Texture", 2D) = "white" {}
+        _NoiseTex("Noise Texture", 2D) = "white" {}
 
         _Test("Test float", float) = 1.0
         _Test2("Test float 2", float) = 1.0
@@ -44,28 +47,37 @@ Shader "Unlit/Bomb" {
             };
 
             struct v2f {
-                float4 uv : TEXCOORD0;
+                float2 uv : TEXCOORD0;
+                float2 textUv : TEXCOORD5;
                 float4 vertex : SV_POSITION;
                 float4 screenuv : TEXCOORD1; // ############
                 float4 worldPos : TEXCOORD2;
                 // half3 worldNormal : TEXCOORD3;
                 half4 normal : TEXCOORD4;
+                half4 thickNormal : TEXCOORD6;
             };
 
             float4 _BaseColor;
             sampler2D _CameraDepthTexture; // ############
             float _Height; 
+            float _Intensity; 
+            sampler2D _NoiseTex; // ############
+            float4 _NoiseTex_ST;
+            float _Test; 
 
             v2f vert (appdata v) {
                 v2f o;
                 // v.vertex.y = v.vertex.y / 10;
                 o.vertex = UnityObjectToClipPos(v.vertex);
+                // o.vertex = UnityObjectToClipPos(v.normal * _Test + v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.screenuv = ComputeScreenPos(o.vertex); // ############
                 COMPUTE_EYEDEPTH(o.screenuv.z); // ############
                 // o.worldNormal = UnityObjectToWorldNormal(v.normal);
                 o.uv = v.uv;
+                o.textUv = TRANSFORM_TEX(v.uv, _NoiseTex);
                 o.normal = v.normal;
+                // half4 emission = _BaseColor * _Intensity;
                 return o;
             }
 
@@ -73,14 +85,24 @@ Shader "Unlit/Bomb" {
                 
                 float4 col = _BaseColor;
 
+                float noiseTexture = tex2D(_NoiseTex, i.textUv.x * 2);
+                float pulse = 0;
+                pulse += sin(_Time.z * 2.5) * 4 + 10;
+                pulse += cos(_Time.z * .5) * 6 + 5;
+                col += saturate(pow(noiseTexture * 2, pulse));
+
                 float height = pow((_Height + 10) / 10, 5); // Recalculate height
                 // height /= pow(i.uv.x, 1); // Depend to uv scale
                 float rimEffect = (1. - saturate(abs(i.uv.y - 0.5) * height));
-                float ySides = (abs(i.normal.y) < 0.999);
-                float rims = rimEffect * ySides;
-                col.a *= rims;
+                col.a *= rimEffect;
 
-                // col.Emission = _BaseColor.rgb; // Add Emission
+                float3 scale = float3(
+                    length(unity_ObjectToWorld._m00_m10_m20),
+                    length(unity_ObjectToWorld._m01_m11_m21),
+                    length(unity_ObjectToWorld._m02_m12_m22)
+                );
+                col.a *= lerp(1, 0, saturate(scale.x - 10));
+                col.a *= (abs(i.normal.y) < 0.999);
 
                 return col;
             }
@@ -122,6 +144,7 @@ Shader "Unlit/Bomb" {
             sampler2D _CameraDepthTexture; // ############
             sampler2D _PulseTex; // ############
             sampler2D _LineTex; // ############
+            sampler2D _NoiseTex; // ############
             float _Height; 
             float4 _PulseTex_ST; 
             float _Test; 
@@ -140,6 +163,8 @@ Shader "Unlit/Bomb" {
                 o.uv = TRANSFORM_TEX(v.uv, _PulseTex);
                 o.normal = v.normal;
                 o.viewDir = ObjSpaceViewDir(v.vertex);
+                
+
                 return o;
             }
 
@@ -168,28 +193,51 @@ Shader "Unlit/Bomb" {
                     length(unity_ObjectToWorld._m02_m12_m22)
                 );
 
-                float pulseTexture = tex2D(_PulseTex, i.uv.xy * scale.xz - scale.xz * .5);
-                float gradient = pow(saturate(distance(i.uv.xy, (0, 0, .5)) * .9 + .5), 7);
-                pulseTexture *= gradient;
-                col.a *= pulseTexture;
 
-                float noise = 0;
-                noise += sin((distance(i.uv.xy, (0, 0, .5)) - 0.25)) * 100;
-                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * sin(_Time.y)) * 1) * 10;
-                noise += sin((distance(i.uv.xy, (0, 0, .5)) + 0.5 * sin(_Time.y)) * 20);
-                // noise += sin((distance(i.uv.y, (0, 0, .5)) - 0.5 * _Time.y) * 20);
-                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * _Time.y)) * .1 + sin((distance(i.uv.y, (0, 0, .5)) - 0.9 * _Time.y)) * .1;
-                // noise = saturate(noise);
-                return noise;
-                float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
-                lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
 
-                float2 test = frac(distance(i.uv.xy, (0, 0, .5)) * 25) / (sin(_Time.y) + 1.1);
-                test *= lineTexture;
-                test *= noise;
-                return fixed4(test, 1, 1);
+                // float noise2 = 0;
+                // float angle = 2;
+                // // noise2 += sin(i.uv.x * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test2);
+                // noise2 += sin(i.uv.y * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test);
+                // noise2 += sin((i.uv.x * _Test2) * _Time.y * _Test);
+                // // noise2 += cos(_Time.y);
 
-                return lineTexture;
+                // return ;
+
+                // float2 test2 = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), i.uv);
+                // return fixed4(test2, 1, 1);
+                // return fixed4(frac(i.uv) * 100, 1, 1);
+                // noiseTexture *= 1- saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) * 1.5 + 0.5);
+                // noiseTexture = saturate(noiseTexture);
+                // col.a *= noiseTexture;
+
+                // float pulseTexture = tex2D(_PulseTex, i.uv * scale.xz - scale.xz * .5);
+
+                float noiseTexture = tex2D(_NoiseTex, i.uv * scale.xz - scale.xz * .5);
+                col.a *= noiseTexture;
+
+                float gradient = saturate(distance(i.uv, (0, 0, .5)) * 2.5 - .3);
+                col.a *= gradient;
+
+                col.a *= 0.5;
+
+                // float noise = 0;
+                // noise += sin((distance(i.uv.xy, (0, 0, .5)) - 0.25)) * 100;
+                // // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * sin(_Time.y)) * 1) * 10;
+                // noise += sin((distance(i.uv.xy, (0, 0, .5)) + 0.5 * sin(_Time.y)) * 20);
+                // // noise += sin((distance(i.uv.y, (0, 0, .5)) - 0.5 * _Time.y) * 20);
+                // // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * _Time.y)) * .1 + sin((distance(i.uv.y, (0, 0, .5)) - 0.9 * _Time.y)) * .1;
+                // // noise = saturate(noise);
+                // return noise;
+                // float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
+                // lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
+
+                // float2 test = frac(distance(i.uv.xy, (0, 0, .5)) * 25) / (sin(_Time.y) + 1.1);
+                // test *= lineTexture;
+                // test *= noise;
+                // return fixed4(test, 1, 1);
+
+                // return lineTexture;
 
                 // return frac(i.screenuv);
 
@@ -200,7 +248,11 @@ Shader "Unlit/Bomb" {
                 // float fresnel = dot(i.worldNormal, i.viewDir) / 50;
                 // return fresnel;
 
+                float t = lerp(1, 0, saturate(scale.x - 10));
+                col.a *= t;
                 col.a *= i.normal.y > 0.999;
+                
+                // col.Emission = _BaseColor.rgb;
 
                 // col.Emission = col.rgb * tex2D(_PulseTex, i.uv).a;
 
@@ -341,4 +393,5 @@ Shader "Unlit/Bomb" {
             ENDCG
         }
     }
+	Fallback "Diffuse"
 }
