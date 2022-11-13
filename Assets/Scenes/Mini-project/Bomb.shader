@@ -69,7 +69,7 @@ Shader "Unlit/Bomb" {
                 v2f o;
                 // v.vertex.y = v.vertex.y / 10;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                // o.vertex = UnityObjectToClipPos(v.normal * _Test + v.vertex);
+                o.vertex = UnityObjectToClipPos(v.vertex * _Test + v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.screenuv = ComputeScreenPos(o.vertex); // ############
                 COMPUTE_EYEDEPTH(o.screenuv.z); // ############
@@ -130,6 +130,7 @@ Shader "Unlit/Bomb" {
 
             struct v2f {
                 float2 uv : TEXCOORD0;
+                float2 uv2 : TEXCOORD6;
                 float4 vertex : SV_POSITION;
                 float4 screenuv : TEXCOORD1; // ############
                 float4 worldPos : TEXCOORD2;
@@ -159,7 +160,7 @@ Shader "Unlit/Bomb" {
                 o.screenuv = ComputeScreenPos(o.vertex); // ############
                 COMPUTE_EYEDEPTH(o.screenuv.z); // ############
                 o.worldNormal = UnityObjectToWorldNormal(v.normal);
-                o.uv = v.uv;
+                o.uv2 = v.uv;
                 o.uv = TRANSFORM_TEX(v.uv, _PulseTex);
                 o.normal = v.normal;
                 o.viewDir = ObjSpaceViewDir(v.vertex);
@@ -193,14 +194,13 @@ Shader "Unlit/Bomb" {
                     length(unity_ObjectToWorld._m02_m12_m22)
                 );
 
-
-
                 // float noise2 = 0;
                 // float angle = 2;
-                // // noise2 += sin(i.uv.x * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test2);
+                // noise2 += sin(i.uv.x * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test2);
                 // noise2 += sin(i.uv.y * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test);
                 // noise2 += sin((i.uv.x * _Test2) * _Time.y * _Test);
-                // // noise2 += cos(_Time.y);
+                // noise2 += cos(_Time.y);
+                // return noise2;
 
                 // return ;
 
@@ -216,19 +216,48 @@ Shader "Unlit/Bomb" {
                 float noiseTexture = tex2D(_NoiseTex, i.uv * scale.xz - scale.xz * .5);
                 col.a *= noiseTexture;
 
+                // return ;
+
+
+
+                float noise = 0;
+                // noise += sin((distance(i.uv.xy, (0, 0, .5)) - 0.1)) * 5;
+                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * sin(_Time.y)) * .5) * 10;
+                
+                float tw = 0;
+                // tw += sin(distance(i.uv2, (0, 0, .5))  * 100) * 2;
+                // tw += sin(i.uv2.x * 50);
+                // tw = i.uv.y * 2;
+                // return tw;
+
+                float tdw = 0;
+                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
+                // tdw += distance(i.uv, (20, -1, .5)) * 10;
+                float angle = atan2(i.uv.x * -2. + 1., i.uv.y * -2. + 1.);
+
+                // rescale -π to +π range to 0.0 to 1.0
+                half gradient2 = angle / (UNITY_PI * 2.);
+                // tdw += frac(gradient2 * 10);
+                tdw = frac(angle * 10);
+                //, distance(i.uv, (0, 0, .5) * sin(_Time.y)))
+                // tdw += sin(distance(i.uv * 10, (0, 0, .5) ) * sin(_Time.y)) * 2;
+                return tdw;
+
+                noise += sin((distance(i.uv.xy, (0, 0, .5)) + 0.5 * -_Time.y) * 10) * .3;
+                // noise *= ((sin(i.uv) * tan(-_Time.y) * .4)) * .3 + 1;
+                // noise += sin(i.uv.x * _Time.y * .1) * .5 + cos(i.uv.y * _Time.y * .1) * .5;
+                noise *= (pow(1 - noiseTexture, 10) * 50);
+                col.a += saturate(noise);
+
+                
                 float gradient = saturate(distance(i.uv, (0, 0, .5)) * 2.5 - .3);
                 col.a *= gradient;
 
+                
                 col.a *= 0.5;
 
-                // float noise = 0;
-                // noise += sin((distance(i.uv.xy, (0, 0, .5)) - 0.25)) * 100;
-                // // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * sin(_Time.y)) * 1) * 10;
-                // noise += sin((distance(i.uv.xy, (0, 0, .5)) + 0.5 * sin(_Time.y)) * 20);
-                // // noise += sin((distance(i.uv.y, (0, 0, .5)) - 0.5 * _Time.y) * 20);
-                // // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * _Time.y)) * .1 + sin((distance(i.uv.y, (0, 0, .5)) - 0.9 * _Time.y)) * .1;
-                // // noise = saturate(noise);
-                // return noise;
+                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * _Time.y)) * .1 + sin((distance(i.uv.y, (0, 0, .5)) - 0.9 * _Time.y)) * .1;
+                // noise = saturate(noise);
                 // float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
                 // lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
 
