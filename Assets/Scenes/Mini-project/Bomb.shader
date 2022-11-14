@@ -69,7 +69,6 @@ Shader "Unlit/Bomb" {
                 v2f o;
                 // v.vertex.y = v.vertex.y / 10;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.vertex = UnityObjectToClipPos(v.vertex * _Test + v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.screenuv = ComputeScreenPos(o.vertex); // ############
                 COMPUTE_EYEDEPTH(o.screenuv.z); // ############
@@ -83,6 +82,9 @@ Shader "Unlit/Bomb" {
 
             fixed4 frag (v2f i) : SV_Target {
                 
+                float preTest = unity_ObjectToWorld > 0;
+                clip(preTest - 0.00001);
+
                 float4 col = _BaseColor;
 
                 float noiseTexture = tex2D(_NoiseTex, i.textUv.x * 2);
@@ -112,7 +114,7 @@ Shader "Unlit/Bomb" {
         // Inside surface
         Pass {
             
-            Cull Off
+            Cull Front
             ZWrite Off
             ZTest LEqual
 
@@ -165,7 +167,6 @@ Shader "Unlit/Bomb" {
                 o.normal = v.normal;
                 o.viewDir = ObjSpaceViewDir(v.vertex);
                 
-
                 return o;
             }
 
@@ -180,6 +181,9 @@ Shader "Unlit/Bomb" {
             }
             fixed4 frag (v2f i) : SV_Target {
                 
+                float preTest = unity_ObjectToWorld > 0;
+                clip(preTest - 0.00001);
+
                 float4 col = _BaseColor;
 
                 float sceneZ = LinearEyeDepth(
@@ -213,73 +217,35 @@ Shader "Unlit/Bomb" {
 
                 // float pulseTexture = tex2D(_PulseTex, i.uv * scale.xz - scale.xz * .5);
 
-                float noiseTexture = tex2D(_NoiseTex, i.uv * scale.xz - scale.xz * .5);
-                col.a *= noiseTexture;
-
-                // return ;
-
-
-
                 float noise = 0;
-                // noise += sin((distance(i.uv.xy, (0, 0, .5)) - 0.1)) * 5;
-                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * sin(_Time.y)) * .5) * 10;
-                
-                float tw = 0;
-                // tw += sin(distance(i.uv2, (0, 0, .5))  * 100) * 2;
-                // tw += sin(i.uv2.x * 50);
-                // tw = i.uv.y * 2;
-                // return tw;
 
-                float tdw = 0;
+                float noiseTexture = tex2D(_NoiseTex, i.normal.xz * scale);
+                noise += (pow(1 - noiseTexture, 5) * 10);
                 // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
-                // tdw += distance(i.uv, (20, -1, .5)) * 10;
-                float angle = atan2(i.uv.x * -2. + 1., i.uv.y * -2. + 1.);
 
-                // rescale -π to +π range to 0.0 to 1.0
-                half gradient2 = angle / (UNITY_PI * 2.);
-                // tdw += frac(gradient2 * 10);
-                tdw = frac(angle * 10);
-                //, distance(i.uv, (0, 0, .5) * sin(_Time.y)))
-                // tdw += sin(distance(i.uv * 10, (0, 0, .5) ) * sin(_Time.y)) * 2;
-                return tdw;
-
-                noise += sin((distance(i.uv.xy, (0, 0, .5)) + 0.5 * -_Time.y) * 10) * .3;
+                noise += sin((distance(i.normal.xz, 0) + 0.5 * -_Time.y) * 10) * .3;
                 // noise *= ((sin(i.uv) * tan(-_Time.y) * .4)) * .3 + 1;
-                // noise += sin(i.uv.x * _Time.y * .1) * .5 + cos(i.uv.y * _Time.y * .1) * .5;
+                noise += sin(i.uv.x * _Time.y * .1) * .5 + cos(i.uv.y * _Time.y * .1) * .5;
                 noise *= (pow(1 - noiseTexture, 10) * 50);
-                col.a += saturate(noise);
-
                 
-                float gradient = saturate(distance(i.uv, (0, 0, .5)) * 2.5 - .3);
+                float dw = (frac(i.uv * 50) < 0.05);
+                // noise += dw;
+                col += saturate(noise) * .1;
+
+                float gradient = saturate(distance(i.normal.xz, 0));
                 col.a *= gradient;
 
-                
                 col.a *= 0.5;
 
-                // noise += sin((distance(i.uv.x, (0, 0, .5)) - 0.5 * _Time.y)) * .1 + sin((distance(i.uv.y, (0, 0, .5)) - 0.9 * _Time.y)) * .1;
-                // noise = saturate(noise);
-                // float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
-                // lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
-
-                // float2 test = frac(distance(i.uv.xy, (0, 0, .5)) * 25) / (sin(_Time.y) + 1.1);
-                // test *= lineTexture;
-                // test *= noise;
-                // return fixed4(test, 1, 1);
-
+                float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
+                lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
                 // return lineTexture;
-
-                // return frac(i.screenuv);
-
-                // return fixed4(frac(i.uv * 10), 1, 1);
-
-                // col += 
 
                 // float fresnel = dot(i.worldNormal, i.viewDir) / 50;
                 // return fresnel;
 
                 float t = lerp(1, 0, saturate(scale.x - 10));
                 col.a *= t;
-                col.a *= i.normal.y > 0.999;
                 
                 // col.Emission = _BaseColor.rgb;
 
@@ -392,6 +358,7 @@ Shader "Unlit/Bomb" {
 
             v2f vert (appdata v) {
                 v2f o;
+                v.vertex.y = 0;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.uv = v.uv;
@@ -416,6 +383,90 @@ Shader "Unlit/Bomb" {
                 fixed4 test = fixed4(lerp(i.uv, fixed4(0, 0, 0, 1), intersect));
                 
                 col.a *= test;
+
+                return col;
+            }
+            ENDCG
+        }
+
+        // Windup
+        Pass {
+            
+            Cull Back
+            ZWrite Off
+
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "UnityCG.cginc"
+
+            struct appdata {
+                float4 vertex : POSITION;
+                float4 uv : TEXCOORD0;
+                float4 normal : NORMAL;
+            };
+
+            struct v2f {
+                float2 uv : TEXCOORD0;
+                float2 textUv : TEXCOORD5;
+                float4 vertex : SV_POSITION;
+                float4 screenuv : TEXCOORD1;
+                float4 worldPos : TEXCOORD2;
+                half3 worldNormal : TEXCOORD3;
+                half4 normal : TEXCOORD4;
+                half4 thickNormal : TEXCOORD6;
+                half3 viewDir : POSITION1;
+            };
+
+            float4 _BaseColor;
+            sampler2D _CameraDepthTexture;
+            float _Height;
+            float _Intensity;
+            sampler2D _NoiseTex;
+            float4 _NoiseTex_ST;
+            float _Test; 
+            float _Test2; 
+
+            v2f vert (appdata v) {
+                v2f o;
+                // o.uv = v.uv;
+                // o.uv = TRANSFORM_TEX(v.uv, _NoiseTex);
+                // v.vertex += v.normal * o.uv;
+                
+                // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
+                float4 dispTexCol = tex2Dlod(_NoiseTex, v.uv);
+                float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
+                dispVal *= .5 / (unity_ObjectToWorld - .5);
+                v.vertex += v.normal * dispVal;
+
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.worldPos = mul(unity_ObjectToWorld, v.uv);
+                o.screenuv = ComputeScreenPos(o.vertex);
+                COMPUTE_EYEDEPTH(o.screenuv.z);
+                o.normal = v.normal;
+
+                o.worldNormal = UnityObjectToWorldNormal(v.normal);
+                o.viewDir = ObjSpaceViewDir(v.vertex);
+
+                // half4 emission = _BaseColor * _Intensity;
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target {
+                
+                float preTest = unity_ObjectToWorld < 0;
+                clip(preTest - 0.00001);
+                
+                float4 col = _BaseColor;
+                col.a = .4;
+
+                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
+				float3 f = normalize(i.viewDir);
+				float fresnel = 5 + -.5 * pow(1 + dot(f, i.normal), 3);
+                fresnel = lerp(fixed4(0, 0, 0, 0), fixed4(1, 1, 1, 1), 1 - fresnel) * .5;
+                fresnel += float4(1, 1, 1, 1);
+                col += fresnel;
 
                 return col;
             }
