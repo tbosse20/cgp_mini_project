@@ -237,7 +237,7 @@ Shader "Unlit/Bomb" {
                 // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(i.viewDir);
 				float fresnel = 5 + -.5 * pow(1 + dot(f, i.normal), 3);
-                fresnel = lerp(0, 1, 1 - fresnel) * .5 + 1;
+                fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5 - unity_ObjectToWorld);
                 col += fresnel;
 
                 return col;
