@@ -215,7 +215,7 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-
+                
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_NoiseTex, v.uv);
                 float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
@@ -237,8 +237,7 @@ Shader "Unlit/Bomb" {
                 // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(i.viewDir);
 				float fresnel = 5 + -.5 * pow(1 + dot(f, i.normal), 3);
-                fresnel = lerp(fixed4(0, 0, 0, 0), fixed4(1, 1, 1, 1), 1 - fresnel) * .5;
-                fresnel += float4(1, 1, 1, 1);
+                fresnel = lerp(0, 1, 1 - fresnel) * .5 + 1;
                 col += fresnel;
 
                 return col;

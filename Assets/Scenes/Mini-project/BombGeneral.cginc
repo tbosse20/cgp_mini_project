@@ -25,11 +25,11 @@ struct v2f {
 float4 _BaseColor;
 sampler2D _CameraDepthTexture; // ############
 sampler2D _PulseTex; // ############
+float4 _PulseTex_ST;
 sampler2D _LineTex; // ############
 sampler2D _NoiseTex; // ############
-float _Height; 
-float4 _PulseTex_ST;
 float4 _NoiseTex_ST;
+float _Height; 
 float _Test; 
 float _Test2; 
 
@@ -39,13 +39,14 @@ float _FadeLength;
 
 v2f generalVert (appdata v) {
     v2f o;
-    o.worldPos = mul(unity_ObjectToWorld, v.uv);
     o.vertex = UnityObjectToClipPos(v.vertex);
     o.screenuv = ComputeScreenPos(o.vertex);
     COMPUTE_EYEDEPTH(o.screenuv.z);
-    o.uv = v.uv;
+    o.worldPos = mul(unity_ObjectToWorld, v.uv);
     o.textUv = TRANSFORM_TEX(v.uv, _NoiseTex);
+    o.viewDir = ObjSpaceViewDir(v.vertex);
     o.normal = v.normal;
+    o.uv = v.uv;
     return o;
 }
 
