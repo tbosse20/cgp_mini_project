@@ -35,48 +35,17 @@ Shader "Unlit/Bomb" {
             ZTest Less
 
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
-                float4 normal : NORMAL;
-            };
-
-            struct v2f {
-                float2 uv : TEXCOORD0;
-                float2 textUv : TEXCOORD5;
-                float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1; // ############
-                float4 worldPos : TEXCOORD2;
-                // half3 worldNormal : TEXCOORD3;
-                half4 normal : TEXCOORD4;
-                half4 thickNormal : TEXCOORD6;
-            };
-
-            float4 _BaseColor;
-            sampler2D _CameraDepthTexture; // ############
-            float _Height; 
-            float _Intensity; 
-            sampler2D _NoiseTex; // ############
-            float4 _NoiseTex_ST;
-            float _Test; 
+            #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
                 v2f o;
-                // v.vertex.y = v.vertex.y / 10;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.screenuv = ComputeScreenPos(o.vertex); // ############
-                COMPUTE_EYEDEPTH(o.screenuv.z); // ############
-                // o.worldNormal = UnityObjectToWorldNormal(v.normal);
+                o.screenuv = ComputeScreenPos(o.vertex);
+                COMPUTE_EYEDEPTH(o.screenuv.z);
                 o.uv = v.uv;
                 o.textUv = TRANSFORM_TEX(v.uv, _NoiseTex);
                 o.normal = v.normal;
-                // half4 emission = _BaseColor * _Intensity;
                 return o;
             }
 
@@ -119,48 +88,15 @@ Shader "Unlit/Bomb" {
             ZTest LEqual
 
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
-                float4 normal : NORMAL;
-            };
-
-            struct v2f {
-                float2 uv : TEXCOORD0;
-                float2 uv2 : TEXCOORD6;
-                float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1; // ############
-                float4 worldPos : TEXCOORD2;
-                float4 clipPos : TEXCOORD3;
-                half3 worldNormal : TEXCOORD5;
-                half4 normal : TEXCOORD4;
-                half3 viewDir: POSITION1;
-
-            };
-
-            float4 _BaseColor;
-            sampler2D _CameraDepthTexture; // ############
-            sampler2D _PulseTex; // ############
-            sampler2D _LineTex; // ############
-            sampler2D _NoiseTex; // ############
-            float _Height; 
-            float4 _PulseTex_ST; 
-            float _Test; 
-            float _Test2; 
+            #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
                 v2f o;
                 v.vertex.y = 0;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                // o.clipPos = (v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.screenuv = ComputeScreenPos(o.vertex); // ############
-                COMPUTE_EYEDEPTH(o.screenuv.z); // ############
+                o.screenuv = ComputeScreenPos(o.vertex);
+                COMPUTE_EYEDEPTH(o.screenuv.z);
                 o.worldNormal = UnityObjectToWorldNormal(v.normal);
                 o.uv2 = v.uv;
                 o.uv = TRANSFORM_TEX(v.uv, _PulseTex);
@@ -278,16 +214,14 @@ Shader "Unlit/Bomb" {
             struct v2f {
                 float4 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1; // ############
+                float4 screenuv : TEXCOORD1;
                 float4 worldPos : TEXCOORD2;
-                // half3 worldNormal : TEXCOORD3;
-                // half3 normal : TEXCOORD4;
             };
 
             float4 _BaseColor;
             float4 _IntersectColor;
             float4 _IntersectColor2;
-            sampler2D _CameraDepthTexture; // ############
+            sampler2D _CameraDepthTexture;
             float _FadeLength;
 
             v2f vert (appdata v) {
@@ -295,10 +229,8 @@ Shader "Unlit/Bomb" {
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.uv = v.uv;
-                o.screenuv = ComputeScreenPos(o.vertex); // ############
-                COMPUTE_EYEDEPTH(o.screenuv.z); // ############
-                // o.worldNormal = UnityObjectToWorldNormal(v.normal);
-                // o.normal = v.normal;
+                o.screenuv = ComputeScreenPos(o.vertex);
+                COMPUTE_EYEDEPTH(o.screenuv.z);
                 return o;
             }
 
@@ -344,16 +276,15 @@ Shader "Unlit/Bomb" {
             struct v2f {
                 float4 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1; // ############
+                float4 screenuv : TEXCOORD1;
                 float4 worldPos : TEXCOORD2;
-                // half3 worldNormal : TEXCOORD3;
                 half3 normal : TEXCOORD4;
             };
 
             float4 _BaseColor;
             float4 _IntersectColor;
             float4 _IntersectColor2;
-            sampler2D _CameraDepthTexture; // ############
+            sampler2D _CameraDepthTexture;
             float _FadeLength;
 
             v2f vert (appdata v) {
@@ -362,9 +293,8 @@ Shader "Unlit/Bomb" {
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.uv);
                 o.uv = v.uv;
-                o.screenuv = ComputeScreenPos(o.vertex); // ############
-                COMPUTE_EYEDEPTH(o.screenuv.z); // ############
-                // o.worldNormal = UnityObjectToWorldNormal(v.normal);
+                o.screenuv = ComputeScreenPos(o.vertex);
+                COMPUTE_EYEDEPTH(o.screenuv.z);
                 o.normal = v.normal;
                 return o;
             }
@@ -396,37 +326,7 @@ Shader "Unlit/Bomb" {
             ZWrite Off
 
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
-                float4 normal : NORMAL;
-            };
-
-            struct v2f {
-                float2 uv : TEXCOORD0;
-                float2 textUv : TEXCOORD5;
-                float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1;
-                float4 worldPos : TEXCOORD2;
-                half3 worldNormal : TEXCOORD3;
-                half4 normal : TEXCOORD4;
-                half4 thickNormal : TEXCOORD6;
-                half3 viewDir : POSITION1;
-            };
-
-            float4 _BaseColor;
-            sampler2D _CameraDepthTexture;
-            float _Height;
-            float _Intensity;
-            sampler2D _NoiseTex;
-            float4 _NoiseTex_ST;
-            float _Test; 
-            float _Test2; 
+            #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
                 v2f o;
