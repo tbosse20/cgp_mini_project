@@ -38,42 +38,38 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.screenuv = ComputeScreenPos(o.vertex);
-                COMPUTE_EYEDEPTH(o.screenuv.z);
-                o.uv = v.uv;
-                o.textUv = TRANSFORM_TEX(v.uv, _NoiseTex);
-                o.normal = v.normal;
+                v2f o = generalVert(v);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target {
                 
+                // Get scale of object
+                float3 scale = getScale();
+
+                // Clip when object is negative size
                 float preTest = unity_ObjectToWorld > 0;
                 clip(preTest - 0.00001);
-
+                
+                // Set base color
                 float4 col = _BaseColor;
+                
+                // Adjust height
+                float height = pow((_Height + 10) / 10, 5); // Recalculate height
+                // height /= pow(i.uv.x, 1); // Depend to uv scale
+                float rimEffect = (1. - saturate(abs(i.uv.y - 0.5) * height));
+                clip(rimEffect - 0.0001);
+                col.a *= rimEffect;
 
+                // Noise texture pulsing with high contrast
                 float noiseTexture = tex2D(_NoiseTex, i.textUv.x * 2);
                 float pulse = 0;
                 pulse += sin(_Time.z * 2.5) * 4 + 10;
                 pulse += cos(_Time.z * .5) * 6 + 5;
                 col += saturate(pow(noiseTexture * 2, pulse));
 
-                float height = pow((_Height + 10) / 10, 5); // Recalculate height
-                // height /= pow(i.uv.x, 1); // Depend to uv scale
-                float rimEffect = (1. - saturate(abs(i.uv.y - 0.5) * height));
-                col.a *= rimEffect;
-
-                float3 scale = float3(
-                    length(unity_ObjectToWorld._m00_m10_m20),
-                    length(unity_ObjectToWorld._m01_m11_m21),
-                    length(unity_ObjectToWorld._m02_m12_m22)
-                );
+                // Lerp to invisible when larger than 10
                 col.a *= lerp(1, 0, saturate(scale.x - 10));
-                col.a *= (abs(i.normal.y) < 0.999);
 
                 return col;
             }
@@ -91,101 +87,59 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v2f o;
                 v.vertex.y = 0;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.screenuv = ComputeScreenPos(o.vertex);
-                COMPUTE_EYEDEPTH(o.screenuv.z);
-                o.worldNormal = UnityObjectToWorldNormal(v.normal);
-                o.uv2 = v.uv;
-                o.uv = TRANSFORM_TEX(v.uv, _PulseTex);
-                o.normal = v.normal;
-                o.viewDir = ObjSpaceViewDir(v.vertex);
-                
+                v2f o = generalVert(v);
                 return o;
             }
 
-            float CalculateBurnNoise(float angle, float2 noiseData)
-            {
-                float noise = 0;
-                noise += (sin(10*angle-noiseData.x* .5)+1) * (sin(noiseData.y*2 )+1)*.5;
-                noise += (sin(7 *angle+noiseData.x* 2 )+1) * (cos(noiseData.y*0.4  )+1)*.6;
-                noise += (sin(3 *angle+noiseData.x* 4 )+1) * (cos(noiseData.y*0.15)+1)*.7;
-                
-                return noise;
-            }
             fixed4 frag (v2f i) : SV_Target {
                 
+                // Clip when object is negative size
                 float preTest = unity_ObjectToWorld > 0;
                 clip(preTest - 0.00001);
 
+                // Set base color
                 float4 col = _BaseColor;
 
-                float sceneZ = LinearEyeDepth(
-                    SAMPLE_DEPTH_TEXTURE_PROJ(
-                        _CameraDepthTexture,
-                    UNITY_PROJ_COORD(i.screenuv)
-                    ));
+                // Get scale of object
+                float3 scale = getScale();
 
-                float3 scale = float3(
-                    length(unity_ObjectToWorld._m00_m10_m20),
-                    length(unity_ObjectToWorld._m01_m11_m21),
-                    length(unity_ObjectToWorld._m02_m12_m22)
-                );
+                // Scaling texture at half opacity 
+                float pulseTexture = tex2D(_PulseTex, i.normal.xz * scale);
+                col.a *= saturate(pulseTexture) * .5;
 
-                // float noise2 = 0;
-                // float angle = 2;
-                // noise2 += sin(i.uv.x * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test2);
-                // noise2 += sin(i.uv.y * _Time.y * _Test) * sin(i.uv.y * _Time.y * _Test);
-                // noise2 += sin((i.uv.x * _Test2) * _Time.y * _Test);
-                // noise2 += cos(_Time.y);
-                // return noise2;
-
-                // return ;
-
-                // float2 test2 = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), i.uv);
-                // return fixed4(test2, 1, 1);
-                // return fixed4(frac(i.uv) * 100, 1, 1);
-                // noiseTexture *= 1- saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) * 1.5 + 0.5);
-                // noiseTexture = saturate(noiseTexture);
-                // col.a *= noiseTexture;
-
-                // float pulseTexture = tex2D(_PulseTex, i.uv * scale.xz - scale.xz * .5);
-
+                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
                 float noise = 0;
-
                 float noiseTexture = tex2D(_NoiseTex, i.normal.xz * scale);
                 noise += (pow(1 - noiseTexture, 5) * 10);
-                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
-
                 noise += sin((distance(i.normal.xz, 0) + 0.5 * -_Time.y) * 10) * .3;
                 // noise *= ((sin(i.uv) * tan(-_Time.y) * .4)) * .3 + 1;
                 noise += sin(i.uv.x * _Time.y * .1) * .5 + cos(i.uv.y * _Time.y * .1) * .5;
                 noise *= (pow(1 - noiseTexture, 10) * 50);
-                
-                float dw = (frac(i.uv * 50) < 0.05);
-                // noise += dw;
                 col += saturate(noise) * .1;
+                
+                // Lines outwards
+                float radiusLines = (frac(i.uv * 50) < 0.05);
 
+                // Center gradient
                 float gradient = saturate(distance(i.normal.xz, 0));
                 col.a *= gradient;
 
-                col.a *= 0.5;
-
-                float lineTexture = tex2D(_LineTex, i.uv.xy * scale.xz - scale.xz * .5);
-                lineTexture *= pow(saturate(distance(i.uv.xy, (0, 0, .5)) * sin(_Time.y) + .5), 1);
+                // Scaling texture with moving sin center gradient
+                float lineTexture = tex2D(_LineTex, i.normal.xz * scale);
+                lineTexture *= pow(saturate(distance(i.normal.xz, 0) * sin(_Time.y) + .5), 1);
                 // return lineTexture;
 
+                // Fresnel
                 // float fresnel = dot(i.worldNormal, i.viewDir) / 50;
                 // return fresnel;
 
+                // Half opacity of pass
+                col.a *= 0.5;
+
+                // Lerp to invisible when larger than 10
                 float t = lerp(1, 0, saturate(scale.x - 10));
                 col.a *= t;
-                
-                // col.Emission = _BaseColor.rgb;
-
-                // col.Emission = col.rgb * tex2D(_PulseTex, i.uv).a;
 
                 return col;
             }
@@ -200,54 +154,20 @@ Shader "Unlit/Bomb" {
             ZTest Greater
 
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
-                float3 normal : NORMAL;
-            };
-
-            struct v2f {
-                float4 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1;
-                float4 worldPos : TEXCOORD2;
-            };
-
-            float4 _BaseColor;
-            float4 _IntersectColor;
-            float4 _IntersectColor2;
-            sampler2D _CameraDepthTexture;
-            float _FadeLength;
+            #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.uv = v.uv;
-                o.screenuv = ComputeScreenPos(o.vertex);
-                COMPUTE_EYEDEPTH(o.screenuv.z);
+                v2f o = generalVert(v);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target {
-
                 fixed4 col = _IntersectColor;
-                float sceneZ = LinearEyeDepth(
-                    SAMPLE_DEPTH_TEXTURE_PROJ(
-                        _CameraDepthTexture,
-                    UNITY_PROJ_COORD(i.screenuv)
-                    ));
+                float sceneZ = getSceneZ(i);
                 float partZ = i.screenuv.z;
                 float diff = sceneZ - partZ;
                 float intersect = saturate(pow(_FadeLength * 2, 5) * diff);
-                fixed4 test = fixed4(lerp(i.uv, _BaseColor, intersect));
-                
-                // col.a *= test;
+                float test = lerp(i.uv, _BaseColor, intersect);
 
                 return col;
             }
@@ -262,55 +182,21 @@ Shader "Unlit/Bomb" {
             ZTest Greater
 
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 uv : TEXCOORD0;
-                float3 normal : NORMAL;
-            };
-
-            struct v2f {
-                float4 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-                float4 screenuv : TEXCOORD1;
-                float4 worldPos : TEXCOORD2;
-                half3 normal : TEXCOORD4;
-            };
-
-            float4 _BaseColor;
-            float4 _IntersectColor;
-            float4 _IntersectColor2;
-            sampler2D _CameraDepthTexture;
-            float _FadeLength;
+            #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v2f o;
-                v.vertex.y = 0;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.uv = v.uv;
-                o.screenuv = ComputeScreenPos(o.vertex);
-                COMPUTE_EYEDEPTH(o.screenuv.z);
-                o.normal = v.normal;
+                v2f o = generalVert(v);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target {
 
                 fixed4 col = _IntersectColor2;
-                float sceneZ = LinearEyeDepth(
-                    SAMPLE_DEPTH_TEXTURE_PROJ(
-                        _CameraDepthTexture,
-                    UNITY_PROJ_COORD(i.screenuv)
-                    ));
+                float sceneZ = getSceneZ(i);
                 float partZ = i.screenuv.z;
                 float diff = sceneZ - partZ;
                 float intersect = saturate(pow(_FadeLength * 2, 5) * diff);
-                fixed4 test = fixed4(lerp(i.uv, fixed4(0, 0, 0, 1), intersect));
+                float test = lerp(i.uv, fixed4(0, 0, 0, 1), intersect);
                 
                 col.a *= test;
 
@@ -329,27 +215,14 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v2f o;
-                // o.uv = v.uv;
-                // o.uv = TRANSFORM_TEX(v.uv, _NoiseTex);
-                // v.vertex += v.normal * o.uv;
-                
+
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_NoiseTex, v.uv);
                 float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
                 dispVal *= .5 / (unity_ObjectToWorld - .5);
                 v.vertex += v.normal * dispVal;
 
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.uv);
-                o.screenuv = ComputeScreenPos(o.vertex);
-                COMPUTE_EYEDEPTH(o.screenuv.z);
-                o.normal = v.normal;
-
-                o.worldNormal = UnityObjectToWorldNormal(v.normal);
-                o.viewDir = ObjSpaceViewDir(v.vertex);
-
-                // half4 emission = _BaseColor * _Intensity;
+                v2f o = generalVert(v);
                 return o;
             }
 
