@@ -1,6 +1,5 @@
 #pragma vertex vert
 #pragma fragment frag
-
 #include "UnityCG.cginc"
 
 struct appdata {
@@ -11,31 +10,34 @@ struct appdata {
 
 struct v2f {
     float2 uv : TEXCOORD0;
-    float2 uv2 : TEXCOORD6;
     float4 vertex : SV_POSITION;
-    float4 screenuv : TEXCOORD1; // ############
-    float4 worldPos : TEXCOORD2;
-    float4 clipPos : TEXCOORD3;
-    half4 normal : TEXCOORD4;
-    half3 worldNormal : TEXCOORD5;
+    half4 normal : TEXCOORD1;
+
     half3 viewDir: POSITION1;
-    float2 textUv : TEXCOORD7;
+    float3 normalDir : TEXCOORD5;
+    float2 uvTexture : TEXCOORD2;
+    float4 screenuv : TEXCOORD3;
+    float4 worldPos : TEXCOORD4;
+    float4 screenPos : TEXCOORD6;
 };
 
 float4 _BaseColor;
-sampler2D _CameraDepthTexture; // ############
-sampler2D _PulseTex; // ############
-float4 _PulseTex_ST;
-sampler2D _LineTex; // ############
-sampler2D _NoiseTex; // ############
-float4 _NoiseTex_ST;
+
+sampler2D _HardNoiseTex;
+float4 _HardNoiseTex_ST;
+sampler2D _SoftNoiseTex;
+float4 _SoftNoiseTex_ST;
+
 float _Height; 
-float _Test; 
-float _Test2; 
 
 float4 _IntersectColor;
 float4 _IntersectColor2;
 float _FadeLength;
+
+sampler2D _CameraDepthTexture;
+
+float _Test; 
+float _Test2; 
 
 v2f generalVert (appdata v) {
     v2f o;
@@ -43,7 +45,7 @@ v2f generalVert (appdata v) {
     o.screenuv = ComputeScreenPos(o.vertex);
     COMPUTE_EYEDEPTH(o.screenuv.z);
     o.worldPos = mul(unity_ObjectToWorld, v.uv);
-    o.textUv = TRANSFORM_TEX(v.uv, _NoiseTex);
+    o.uvTexture = TRANSFORM_TEX(v.uv, _SoftNoiseTex);
     o.viewDir = ObjSpaceViewDir(v.vertex);
     o.normal = v.normal;
     o.uv = v.uv;

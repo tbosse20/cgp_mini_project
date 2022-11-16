@@ -40,8 +40,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _HardNoiseTex:
+        m_Texture: {fileID: 2800000, guid: d78aeb4586fea0d468eb82400d685a4f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _LineTex:
-        m_Texture: {fileID: 2800000, guid: 9b1c7fcd7f1c1e94f8ef26ddb430f399, type: 3}
+        m_Texture: {fileID: 2800000, guid: d78aeb4586fea0d468eb82400d685a4f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -53,9 +57,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NoiseTex:
-        m_Texture: {fileID: 2800000, guid: d78aeb4586fea0d468eb82400d685a4f, type: 3}
-        m_Scale: {x: 8.17, y: 1}
-        m_Offset: {x: 0, y: 9.52}
+        m_Texture: {fileID: 2800000, guid: c94a5265f7ab0464dbf21c072e36155a, type: 3}
+        m_Scale: {x: 4.97, y: 16.63}
+        m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -65,7 +69,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PulseTex:
-        m_Texture: {fileID: 2800000, guid: 4827dd0cfd7459e4ab5debeaa08b1b7a, type: 3}
+        m_Texture: {fileID: 2800000, guid: d78aeb4586fea0d468eb82400d685a4f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SoftNoiseTex:
+        m_Texture: {fileID: 2800000, guid: c94a5265f7ab0464dbf21c072e36155a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -78,7 +86,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Height: 14.49
+    - _Height: 15
     - _Intensity: 0
     - _Metallic: 0
     - _Mode: 0
@@ -88,7 +96,7 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _Test: -0.74
+    - _Test: 25.1
     - _Test2: 15.17
     - _UVSec: 0
     - _ZWrite: 1

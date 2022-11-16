@@ -9,9 +9,8 @@ Shader "Unlit/Bomb" {
         _Height ("Height", range(0, 25)) = 15.0
         _Intensity ("Intensity", range(0, 25)) = 15.0
         _FadeLength ("Fade length", float) = 10.0
-        [NoScaleOffset] _PulseTex("Hex Pulse Texture", 2D) = "white" {}
-        [NoScaleOffset] _LineTex("Line Texture", 2D) = "white" {}
-        _NoiseTex("Noise Texture", 2D) = "white" {}
+        [NoScaleOffset] _HardNoiseTex("Hard noise", 2D) = "white" {}
+        [NoScaleOffset] _SoftNoiseTex("Soft noise", 2D) = "white" {}
 
         _Test("Test float", float) = 1.0
         _Test2("Test float 2", float) = 1.0
@@ -21,19 +20,18 @@ Shader "Unlit/Bomb" {
     SubShader {
         
         Tags {
-            "RenderType" = "Opaque"
+            "RenderType" = "Transparent"
+            "IgnoreProjector"="True" 
             "Queue" = "Transparent"
             }
     
         Blend SrcAlpha OneMinusSrcAlpha 
+        Cull Off
+        ZWrite Off
 
         // Outside rim
         Pass {
             
-            Cull Off
-            ZWrite Off
-            ZTest Less
-
             CGPROGRAM
             #include "BombGeneral.cginc"
 
@@ -62,11 +60,11 @@ Shader "Unlit/Bomb" {
                 col.a *= rimEffect;
 
                 // Noise texture pulsing with high contrast
-                float noiseTexture = tex2D(_NoiseTex, i.textUv.x * 2);
+                float noiseTexture = tex2D(_HardNoiseTex, i.uvTexture.x * 2);
                 float pulse = 0;
                 pulse += sin(_Time.z * 2.5) * 4 + 10;
                 pulse += cos(_Time.z * .5) * 6 + 5;
-                col += saturate(pow(noiseTexture * 2, pulse));
+                col = saturate(pow(noiseTexture * 2, pulse) + col);
 
                 // Lerp to invisible when larger than 10
                 col.a *= lerp(1, 0, saturate(scale.x - 10));
@@ -80,8 +78,6 @@ Shader "Unlit/Bomb" {
         Pass {
             
             Cull Front
-            ZWrite Off
-            ZTest LEqual
 
             CGPROGRAM
             #include "BombGeneral.cginc"
@@ -89,7 +85,23 @@ Shader "Unlit/Bomb" {
             v2f vert (appdata v) {
                 v.vertex.y = 0;
                 v2f o = generalVert(v);
+                
+                float4x4 modelMatrix = unity_ObjectToWorld;
+                float4x4 modelMatrixInverse = unity_WorldToObject; 
+                // o.viewDir = mul(modelMatrix, v.vertex).xyz - _WorldSpaceCameraPos;
+                o.normalDir = normalize(mul(v.normal, modelMatrixInverse).xyz);
+                
+                o.screenPos = ComputeScreenPos(o.vertex);
                 return o;
+            }
+
+            float makeNoise(v2f i, float text) {
+                float noise = 0;
+                noise += pow(text, 2);
+                noise += sin((distance(i.normal.xz, 0) + .5 * -_Time.y) * 10) * .2;
+                noise += sin(i.uv.y * _Time.y * .01) * .1;
+                noise *= pow(text, 5) * 10;
+                return noise;
             }
 
             fixed4 frag (v2f i) : SV_Target {
@@ -105,37 +117,28 @@ Shader "Unlit/Bomb" {
                 float3 scale = getScale();
 
                 // Scaling texture at half opacity 
-                float pulseTexture = tex2D(_PulseTex, i.normal.xz * scale);
-                col.a *= saturate(pulseTexture) * .5;
-
-                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
-                float noise = 0;
-                float noiseTexture = tex2D(_NoiseTex, i.normal.xz * scale);
-                noise += (pow(1 - noiseTexture, 5) * 10);
-                noise += sin((distance(i.normal.xz, 0) + 0.5 * -_Time.y) * 10) * .3;
-                // noise *= ((sin(i.uv) * tan(-_Time.y) * .4)) * .3 + 1;
-                noise += sin(i.uv.x * _Time.y * .1) * .5 + cos(i.uv.y * _Time.y * .1) * .5;
-                noise *= (pow(1 - noiseTexture, 10) * 50);
-                col += saturate(noise) * .1;
-                
-                // Lines outwards
-                float radiusLines = (frac(i.uv * 50) < 0.05);
+                // float pulseTexture = tex2D(_HardNoiseTex, i.normal.xz * scale);
+                // col.a *= saturate(pulseTexture) * .5;
 
                 // Center gradient
-                float gradient = saturate(distance(i.normal.xz, 0));
+                float gradient = pow(saturate(distance(i.normal.xz, 0)), 3);
+                
+                // Scaling texture with moving sin center gradient
+                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
+                float softNoiseTex = tex2D(_SoftNoiseTex, sin(i.normal.xz) * scale);
+                float pulseTexture = makeNoise(i, softNoiseTex);
+                pulseTexture *= gradient;
+                col += pulseTexture * .5;
+                
+                float invPulseTexture = makeNoise(i, 1-softNoiseTex);
+                invPulseTexture *= gradient;
+                col.a += invPulseTexture * .2;
+
                 col.a *= gradient;
 
-                // Scaling texture with moving sin center gradient
-                float lineTexture = tex2D(_LineTex, i.normal.xz * scale);
-                lineTexture *= pow(saturate(distance(i.normal.xz, 0) * sin(_Time.y) + .5), 1);
-                // return lineTexture;
-
-                // Fresnel
-                // float fresnel = dot(i.worldNormal, i.viewDir) / 50;
-                // return fresnel;
-
-                // Half opacity of pass
-                col.a *= 0.5;
+                // float radiusLines = (frac(i.uv * 50) < 0.15); // Lines outwards
+                // float fresnel = dot(i.worldNormal, i.viewDir) / 50;// Fresnel
+                // col.a *= 0.5; // Half opacity of pass
 
                 // Lerp to invisible when larger than 10
                 float t = lerp(1, 0, saturate(scale.x - 10));
@@ -150,7 +153,6 @@ Shader "Unlit/Bomb" {
         Pass {
             
             Cull Front
-            ZWrite Off
             ZTest Greater
 
             CGPROGRAM
@@ -178,7 +180,6 @@ Shader "Unlit/Bomb" {
         Pass {
             
             Cull Front
-            ZWrite Off
             ZTest Greater
 
             CGPROGRAM
@@ -190,8 +191,15 @@ Shader "Unlit/Bomb" {
             }
 
             fixed4 frag (v2f i) : SV_Target {
-
                 fixed4 col = _IntersectColor2;
+
+                // Adjust height
+                float height = pow((_Height + 10) / 10, 5); // Recalculate height
+                // height /= pow(i.uv.x, 1); // Depend to uv scale
+                float rimEffect = (1. - saturate(abs(i.uv.y - 0.5) * height));
+                clip(rimEffect - 0.0001);
+                col.a *= rimEffect;
+
                 float sceneZ = getSceneZ(i);
                 float partZ = i.screenuv.z;
                 float diff = sceneZ - partZ;
@@ -209,7 +217,6 @@ Shader "Unlit/Bomb" {
         Pass {
             
             Cull Back
-            ZWrite Off
 
             CGPROGRAM
             #include "BombGeneral.cginc"
@@ -217,7 +224,7 @@ Shader "Unlit/Bomb" {
             v2f vert (appdata v) {
                 
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
-                float4 dispTexCol = tex2Dlod(_NoiseTex, v.uv);
+                float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
                 float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
                 dispVal *= .5 / (unity_ObjectToWorld - .5);
                 v.vertex += v.normal * dispVal;
