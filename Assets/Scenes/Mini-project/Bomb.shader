@@ -100,6 +100,7 @@ Shader "Unlit/Bomb" {
                 noise += pow(text, 2);
                 noise += sin((distance(i.normal.xz, 0) + .5 * -_Time.y) * 10) * .2;
                 noise += sin(i.uv.y * _Time.y * .01) * .1;
+                noise += saturate(sin(text * sin(_Time.y * .5 + .5)) * 2);
                 noise *= pow(text, 5) * 10;
                 return noise;
             }
@@ -112,6 +113,8 @@ Shader "Unlit/Bomb" {
 
                 // Set base color
                 float4 col = _BaseColor;
+                
+                col.a *= .7; // Half opacity of pass
 
                 // Get scale of object
                 float3 scale = getScale();
@@ -121,28 +124,30 @@ Shader "Unlit/Bomb" {
                 // col.a *= saturate(pulseTexture) * .5;
 
                 // Center gradient
-                float gradient = pow(saturate(distance(i.normal.xz, 0)), 3);
+                float gradient = distance(i.normal.xz, 0) - scale / 100;
                 
                 // Scaling texture with moving sin center gradient
                 // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
-                float softNoiseTex = tex2D(_SoftNoiseTex, sin(i.normal.xz) * scale);
-                float pulseTexture = makeNoise(i, softNoiseTex);
+                float hardNoiseTex = tex2D(_HardNoiseTex, sin(i.normal.xz) * scale);
+
+                float pulseTexture = makeNoise(i, hardNoiseTex);
                 pulseTexture *= gradient;
-                col += pulseTexture * .5;
+                // col += pulseTexture * .1;
                 
-                float invPulseTexture = makeNoise(i, 1-softNoiseTex);
+                float invPulseTexture = makeNoise(i, 1-hardNoiseTex);
                 invPulseTexture *= gradient;
-                col.a += invPulseTexture * .2;
+                col.a += invPulseTexture * .4;
 
                 col.a *= gradient;
 
                 // float radiusLines = (frac(i.uv * 50) < 0.15); // Lines outwards
                 // float fresnel = dot(i.worldNormal, i.viewDir) / 50;// Fresnel
-                // col.a *= 0.5; // Half opacity of pass
 
                 // Lerp to invisible when larger than 10
                 float t = lerp(1, 0, saturate(scale.x - 10));
                 col.a *= t;
+
+                col.a *= .7; // Half opacity of pass
 
                 return col;
             }
@@ -213,6 +218,43 @@ Shader "Unlit/Bomb" {
             ENDCG
         }
 
+        // Cones
+        Pass {
+            
+            Cull Off
+
+            CGPROGRAM
+            #include "BombGeneral.cginc"
+
+            v2f vert (appdata v) {
+                v.vertex.xz = sin(v.vertex.y);
+                v.vertex.x *= v.normal.x * .3;
+                v.vertex.z *= v.normal.z * .3;
+                v.vertex.y *= (1 / unity_ObjectToWorld) * .3;
+                
+                v2f o = generalVert(v);
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target {
+                
+                float preTest = unity_ObjectToWorld < 0;
+                clip(preTest - 0.00001);
+                
+                float4 col = _BaseColor;
+                col.a = .4;
+
+                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
+				float3 f = normalize(i.normal);
+				float fresnel = unity_ObjectToWorld * 2.5 + 4 * pow(dot(f, i.normal.y), 3.5);
+                fresnel = saturate(lerp(0, 1, fresnel) * .5 - unity_ObjectToWorld);
+                col += fresnel;
+
+                return col;
+            }
+            ENDCG
+        }
+
         // Windup
         Pass {
             
@@ -226,7 +268,7 @@ Shader "Unlit/Bomb" {
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
                 float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
-                dispVal *= .5 / (unity_ObjectToWorld - .5);
+                dispVal *= sin(unity_ObjectToWorld);
                 v.vertex += v.normal * dispVal;
 
                 v2f o = generalVert(v);
@@ -241,12 +283,61 @@ Shader "Unlit/Bomb" {
                 float4 col = _BaseColor;
                 col.a = .4;
 
+                float3 scale = getScale();
+                float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 10 / scale);
+                col += softNoiseTex * .5 ;
+                col *= (.3, .3, .3, 1);
+
                 // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(i.viewDir);
-				float fresnel = 5 + -.5 * pow(1 + dot(f, i.normal), 3);
+				float fresnel = 4 + -.5 * pow(1 + dot(f, i.normal), 3.5);
                 fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5 - unity_ObjectToWorld);
                 col += fresnel;
 
+                return col;
+            }
+            ENDCG
+        }
+        
+
+        // Windup smoke
+        Pass {
+            
+            Cull Off
+
+            CGPROGRAM
+            #include "BombGeneral.cginc"
+
+            v2f vert (appdata v) {
+                
+                // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
+                float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
+                float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
+                dispVal *= sin(unity_ObjectToWorld);
+                v.vertex += v.normal * dispVal;
+
+                v2f o = generalVert(v);
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target {
+                
+                float preTest = unity_ObjectToWorld < 0;
+                clip(preTest - 0.00001);
+                
+                float4 col = fixed4(1, 1, 1, 1);
+
+                for (int ii = 1; ii < 3; ii++) {
+                    float smoke = tex2D(_SoftNoiseTex, i.uv * (ii * 2) + _Time.x);
+                    float color = ii / 10;
+                    col *= fixed4(color, color, color, smoke);
+                }
+                
+                float blackout = tex2D(_HardNoiseTex, i.normalDir + _Time.x);
+                col.a *= blackout * .5;
+                col.a += .1;
+                
+                // col.a = 0;
                 return col;
             }
             ENDCG

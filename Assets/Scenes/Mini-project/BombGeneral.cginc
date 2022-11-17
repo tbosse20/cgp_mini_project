@@ -1,3 +1,5 @@
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
 #pragma vertex vert
 #pragma fragment frag
 #include "UnityCG.cginc"
@@ -14,11 +16,12 @@ struct v2f {
     half4 normal : TEXCOORD1;
 
     half3 viewDir: POSITION1;
-    float3 normalDir : TEXCOORD5;
-    float2 uvTexture : TEXCOORD2;
-    float4 screenuv : TEXCOORD3;
-    float4 worldPos : TEXCOORD4;
-    float4 screenPos : TEXCOORD6;
+    float3 normalDir : TEXCOORD2;
+    float2 uvTexture : TEXCOORD3;
+    float4 screenuv : TEXCOORD4;
+    float4 worldPos : TEXCOORD5;
+    float3 worldNormal : TEXCOORD6;
+    float4 screenPos : TEXCOORD7;
 };
 
 float4 _BaseColor;
@@ -44,6 +47,7 @@ v2f generalVert (appdata v) {
     o.vertex = UnityObjectToClipPos(v.vertex);
     o.screenuv = ComputeScreenPos(o.vertex);
     COMPUTE_EYEDEPTH(o.screenuv.z);
+    o.worldNormal = mul(unity_ObjectToWorld, v.normal).xyz;
     o.worldPos = mul(unity_ObjectToWorld, v.uv);
     o.uvTexture = TRANSFORM_TEX(v.uv, _SoftNoiseTex);
     o.viewDir = ObjSpaceViewDir(v.vertex);
