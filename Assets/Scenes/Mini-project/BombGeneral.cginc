@@ -44,6 +44,7 @@ float _Test2;
 
 v2f generalVert (appdata v) {
     v2f o;
+
     o.vertex = UnityObjectToClipPos(v.vertex);
     o.screenuv = ComputeScreenPos(o.vertex);
     COMPUTE_EYEDEPTH(o.screenuv.z);
@@ -53,6 +54,7 @@ v2f generalVert (appdata v) {
     o.viewDir = ObjSpaceViewDir(v.vertex);
     o.normal = v.normal;
     o.uv = v.uv;
+
     return o;
 }
 
@@ -69,5 +71,10 @@ float getSceneZ(v2f i) {
             _CameraDepthTexture,
             UNITY_PROJ_COORD(i.screenuv)
             ));
+}
+
+void showAtScale(float scaleTarget) {
+    float preTest = scaleTarget * unity_ObjectToWorld > 0;
+    clip(preTest - 0.00001);
 }
                 
