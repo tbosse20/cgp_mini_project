@@ -62,46 +62,23 @@ Shader "Unlit/Bomb" {
             fixed4 frag (v2f i) : SV_Target {
                 
                 showAtScale(1); // Show when object is positive size
+                float3 scale = getScale(); // Get scale of object
+                float4 col = _BaseColor; // Set base color
 
-                // Set base color
-                float4 col = _BaseColor;
-                
-                col.a *= .7; // Half opacity of pass
-
-                // Get scale of object
-                float3 scale = getScale();
-
-                // Scaling texture at half opacity 
-                // float pulseTexture = tex2D(_HardNoiseTex, i.normal.xz * scale);
-                // col.a *= saturate(pulseTexture) * .5;
-
-                // Center gradient
-                float gradient = distance(i.normal.xz, 0) - scale / 100;
-                
                 // Scaling texture with moving sin center gradient
                 // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
                 float hardNoiseTex = tex2D(_HardNoiseTex, sin(i.normal.xz) * scale);
+                float lightning = 1 - hardNoiseTex;
+                lightning = makeNoise(i, lightning);
                 float softNoiseTex = tex2D(_SoftNoiseTex, i.normal.xz * scale * 3);
-                softNoiseTex = saturate(softNoiseTex * 2);
+                lightning *= saturate(softNoiseTex * 2);
+                col.a += lightning * .4;
 
-                float pulseTexture = makeNoise(i, hardNoiseTex);
-                pulseTexture *= gradient * softNoiseTex;
-                // col += pulseTexture * .1;
-                
-                float invPulseTexture = 1 - hardNoiseTex;
-                invPulseTexture = makeNoise(i, invPulseTexture);
-                invPulseTexture *= softNoiseTex;
-                invPulseTexture *= gradient;
-                col.a += invPulseTexture * .4;
-
-                col.a *= gradient;
-
+                col.a *= distance(i.normal.xz, 0) - scale / 100; // Center gradient
                 // float radiusLines = (frac(i.uv * 50) < 0.15); // Lines outwards
-                // float fresnel = dot(i.worldNormal, i.viewDir) / 50;// Fresnel
-
-                // Lerp to invisible when larger than 10
-                float t = lerp(1, 0, saturate(scale.x - 10));
-                col.a *= t;
+                // float fresnel = dot(i.worldNormal, i.viewDir) / 50; // Fresnel
+                
+                col.a *= lerp(1, 0, saturate(scale.x - 10)); // Lerp to invisible when larger than 10
 
                 col.a *= .7; // Half opacity of pass
 
@@ -124,13 +101,10 @@ Shader "Unlit/Bomb" {
 
             fixed4 frag (v2f i) : SV_Target {
                 
-                // Get scale of object
-                float3 scale = getScale();
-
+                float3 scale = getScale(); // Get scale of object
                 showAtScale(1); // Show when object is positive size
                 
-                // Set base color
-                float4 col = _BaseColor;
+                float4 col = _BaseColor; // Set base color
 
                 // Adjust height
                 float rimEffect = (-distance(i.normal.y, 0)) + _Height;
@@ -144,8 +118,7 @@ Shader "Unlit/Bomb" {
                 col.rgb += noiseTexture;
                 col.a = pow(col.a, 10);
 
-                // Lerp to invisible when larger than 10
-                col.a *= lerp(1, 0, saturate(scale - 10));
+                col.a *= lerp(1, 0, saturate(scale - 10)); // Lerp to invisible when larger than 10
 
                 return col;
             }
@@ -281,7 +254,7 @@ Shader "Unlit/Bomb" {
                 
                 showAtScale(-1); // Show when object is negative size
                 
-                float4 col = _BaseColor;
+                float4 col = _BaseColor; // Set base color
                 col.a = .4;
 
                 float3 scale = getScale();
@@ -337,7 +310,6 @@ Shader "Unlit/Bomb" {
                 col.a *= blackout * .5;
                 col.a += .1;
                 
-                // col.a = 0;
                 return col;
             }
             ENDCG
