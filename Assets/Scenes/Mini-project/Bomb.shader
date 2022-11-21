@@ -320,6 +320,42 @@ Shader "Unlit/Bomb" {
             }
             ENDCG
         }
+        
+
+        // Light glimt
+        Pass {
+            
+            Cull Back
+
+            CGPROGRAM
+            #include "BombGeneral.cginc"
+
+            v2f vert (appdata v) {
+                
+                v.vertex *= 300;
+
+                v2f o = generalVert(v);
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target {
+                
+                float preTest = unity_ObjectToWorld < .3 && unity_ObjectToWorld > -.3;
+                clip(preTest - 0.00001);
+                
+                float4 col = _BaseColor;
+                
+
+                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
+				float3 f = normalize(i.viewDir);
+				float fresnel = 2 -.5 * pow(1 + dot(f, i.normal), 3);
+                fresnel = saturate(lerp(0, 1, 1 - fresnel));
+                col += fresnel;
+
+                return col;
+            }
+            ENDCG
+        }
     }
 	Fallback "Diffuse"
 }

@@ -331,7 +331,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &384760290
 GameObject:
   m_ObjectHideFlags: 0
@@ -537,7 +540,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1303253465
 GameObject:
   m_ObjectHideFlags: 0
@@ -728,7 +734,7 @@ Transform:
   m_GameObject: {fileID: 1385560626}
   m_LocalRotation: {x: 0.15966675, y: 0.64965796, z: -0.14218292, w: 0.7295445}
   m_LocalPosition: {x: 1.41, y: 0.17, z: 7.83}
-  m_LocalScale: {x: -0.06, y: -0.06, z: -0.06}
+  m_LocalScale: {x: 1.9377767, y: 1.9377767, z: 1.9377767}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -747,7 +753,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1547864916
 GameObject:
   m_ObjectHideFlags: 0
@@ -957,7 +966,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1639121774
 GameObject:
   m_ObjectHideFlags: 0
@@ -1069,7 +1081,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1708619498
 GameObject:
   m_ObjectHideFlags: 0
@@ -1162,7 +1177,7 @@ Transform:
   m_GameObject: {fileID: 1708619498}
   m_LocalRotation: {x: 0.15966675, y: 0.64965796, z: -0.14218292, w: 0.7295445}
   m_LocalPosition: {x: -0.591, y: 1.368, z: 2.248}
-  m_LocalScale: {x: 1.5132614, y: 1.5132614, z: 1.5132614}
+  m_LocalScale: {x: 1.2591243, y: 1.2591243, z: 1.2591243}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1181,7 +1196,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1751335648
 GameObject:
   m_ObjectHideFlags: 0
@@ -1293,7 +1311,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   detonationTimer: -2
-  fullSize: 15
+  explotionSpeed: 2
+  explotionSize: 15
+  windupSpeed: 2
+  windupSize: 3
 --- !u!1 &1844370142
 GameObject:
   m_ObjectHideFlags: 0
