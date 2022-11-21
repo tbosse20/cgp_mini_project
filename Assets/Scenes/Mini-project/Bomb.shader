@@ -203,12 +203,18 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                v.vertex.xz = sin(v.vertex.y);
-                v.vertex.x *= v.normal.x * .3;
-                v.vertex.z *= v.normal.z * .3;
-                v.vertex.y *= (1 / unity_ObjectToWorld) * .3;
+                v2f o;
+
+                v.vertex.y = min(.3, v.vertex.y);
+                v.vertex.y = min(.3, -v.vertex.y);
+                v.vertex.y *= (1 / length(unity_ObjectToWorld._m01_m11_m21)) * 10;
                 
-                v2f o = generalVert(v);
+                v.vertex.xz = sin(v.vertex.y);
+                v.vertex.x *= v.normal.x * .05 * length(unity_ObjectToWorld._m01_m11_m21);
+                v.vertex.z *= v.normal.z * .05 * length(unity_ObjectToWorld._m01_m11_m21);
+
+                o = generalVert(v);
+                
                 return o;
             }
 
@@ -220,9 +226,9 @@ Shader "Unlit/Bomb" {
                 col.a = .4;
 
                 // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
-				float3 f = normalize(i.normal);
-				float fresnel = unity_ObjectToWorld * 2.5 + 4 * pow(dot(f, i.normal.y), 3.5);
-                fresnel = saturate(lerp(0, 1, fresnel) * .5 - unity_ObjectToWorld);
+				float3 f = normalize(ObjSpaceViewDir(i.normal));
+                float fresnel = 3 + 3.5 * pow(dot(f, i.normal), 3);
+                fresnel = saturate(lerp(0, 1, 1-fresnel));
                 col += fresnel;
 
                 return col;
@@ -242,7 +248,7 @@ Shader "Unlit/Bomb" {
                 
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
-                float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
+                float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
                 v.vertex += v.normal * dispVal;
 
@@ -286,7 +292,7 @@ Shader "Unlit/Bomb" {
                 
                 // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
-                float dispVal = dot(float3(0.21, 0.72, 0.07), dispTexCol.rgb);
+                float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
                 v.vertex += v.normal * dispVal;
 

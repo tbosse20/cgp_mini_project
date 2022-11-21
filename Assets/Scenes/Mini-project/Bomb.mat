@@ -96,8 +96,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _Test: 4.47
-    - _Test2: -0.58
+    - _Test: 3.26
+    - _Test2: 3.51
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
