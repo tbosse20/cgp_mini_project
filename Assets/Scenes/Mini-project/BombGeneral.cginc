@@ -14,6 +14,7 @@ struct v2f {
     float2 uv : TEXCOORD0;
     float4 vertex : SV_POSITION;
     half4 normal : TEXCOORD1;
+    half4 postNormal : TEXCOORD17;
 
     half3 viewDir : POSITION1;
     float3 normalDir : TEXCOORD2;
@@ -46,6 +47,7 @@ v2f generalVert (appdata v) {
     v2f o;
 
     o.vertex = UnityObjectToClipPos(v.vertex);
+    o.postNormal = v.normal;
 
     o.screenuv = ComputeScreenPos(o.vertex);
     COMPUTE_EYEDEPTH(o.screenuv.z);

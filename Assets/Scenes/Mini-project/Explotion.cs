@@ -6,7 +6,7 @@ public class Explotion : MonoBehaviour {
 
     [Range(-10, 0)] public float detonationTimer = -10f;
     [Range(0, 5)] public float explotionSpeed = 2f;
-    public int explotionSize = 15;
+    public int explotionSize = 10;
     [Range(0, 5)] public float windupSpeed = 2f;
     public int windupSize = 3;
 
@@ -15,7 +15,7 @@ public class Explotion : MonoBehaviour {
     // Start is called before the first frame update
     void Start() {
 
-        detonationTimer -= Random.Range(1f, 3f);
+        // detonationTimer -= Random.Range(1f, 3f);
         gameObject.transform.localScale = new Vector3(0, 0, 0);
 
         float rotationX = Random.Range(0f, 360f);

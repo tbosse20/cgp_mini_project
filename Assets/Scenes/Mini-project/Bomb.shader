@@ -1,5 +1,8 @@
 // https://lexdev.net/tutorials/case_studies/overwatch_shield.html
 // https://gamedevbill.com/paper-burn-shader-in-unity/
+// https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
+// https://bgolus.medium.com/progressing-in-circles-13452434fdb9
+// https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
 
 Shader "Unlit/Bomb" {
     Properties {
@@ -21,7 +24,6 @@ Shader "Unlit/Bomb" {
         
         Tags {
             "RenderType" = "Transparent"
-            "IgnoreProjector"="True" 
             "Queue" = "Transparent"
             }
     
@@ -66,7 +68,6 @@ Shader "Unlit/Bomb" {
                 float4 col = _BaseColor; // Set base color
 
                 // Scaling texture with moving sin center gradient
-                // https://bgolus.medium.com/progressing-in-circles-13452434fdb9
                 float hardNoiseTex = tex2D(_HardNoiseTex, sin(i.normal.xz) * scale);
                 float lightning = 1 - hardNoiseTex;
                 lightning = makeNoise(i, lightning);
@@ -225,7 +226,6 @@ Shader "Unlit/Bomb" {
                 float4 col = _BaseColor;
                 col.a = .4;
 
-                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(ObjSpaceViewDir(i.normal));
                 float fresnel = 3 + 3.5 * pow(dot(f, i.normal), 3);
                 fresnel = saturate(lerp(0, 1, 1-fresnel));
@@ -246,7 +246,6 @@ Shader "Unlit/Bomb" {
 
             v2f vert (appdata v) {
                 
-                // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
                 float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
@@ -268,7 +267,6 @@ Shader "Unlit/Bomb" {
                 col += softNoiseTex * .5 ;
                 col *= (.3, .3, .3, 1);
 
-                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(i.viewDir);
 				float fresnel = 4 + -.5 * pow(1 + dot(f, i.normal), 3.5);
                 fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5 - unity_ObjectToWorld);
@@ -290,7 +288,6 @@ Shader "Unlit/Bomb" {
 
             v2f vert (appdata v) {
                 
-                // https://en.wikibooks.org/wiki/Cg_Programming/Unity/Displacement_Maps
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
                 float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
@@ -322,36 +319,39 @@ Shader "Unlit/Bomb" {
         }
         
 
-        // Light glimt
+        // Bloom
         Pass {
             
-            Cull Back
+            Cull Off
+            ZWrite Off
 
             CGPROGRAM
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
                 
-                v.vertex *= 300;
-
+                float dist = length(ObjSpaceViewDir(v.vertex));
+                dist = min(abs(unity_ObjectToWorld) * 1000, dist * 2);
+                v.vertex *= dist;
                 v2f o = generalVert(v);
+                
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target {
                 
-                float preTest = unity_ObjectToWorld < .3 && unity_ObjectToWorld > -.3;
+                float preTest = unity_ObjectToWorld < -.01 && unity_ObjectToWorld > -.2;
                 clip(preTest - 0.00001);
                 
                 float4 col = _BaseColor;
-                
 
-                // https://gist.github.com/hadashiA/fbd0afb253f161a1589e3df3d43460fd
 				float3 f = normalize(i.viewDir);
-				float fresnel = 2 -.5 * pow(1 + dot(f, i.normal), 3);
-                fresnel = saturate(lerp(0, 1, 1 - fresnel));
-                col += fresnel;
-
+				float fresnel = (10.25 + unity_ObjectToWorld * 3) - (3.8 + unity_ObjectToWorld * 3) * pow(1 + dot(f, i.normal), 1.5);
+                fresnel = saturate(lerp(_BaseColor, fixed4(1, 1, 1, 1), 1-fresnel));
+                col.a = fresnel;
+                fresnel = saturate(lerp(_BaseColor, fixed4(1, 1, 1, 1), fresnel));
+                col.rgb += pow(fresnel, 10) * 10;
+                
                 return col;
             }
             ENDCG
