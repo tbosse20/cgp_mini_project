@@ -126,75 +126,6 @@ Shader "Unlit/Bomb" {
             ENDCG
         }
 
-        // In front objects
-        Pass {
-            
-            Cull Front
-            ZTest Greater
-
-            CGPROGRAM
-            #include "BombGeneral.cginc"
-
-            v2f vert (appdata v) {
-                v2f o = generalVert(v);
-                return o;
-            }
-
-            fixed4 frag (v2f i) : SV_Target {
-
-                showAtScale(1); // Show when object is positive size
-
-                fixed4 col = _IntersectColor;
-                float sceneZ = getSceneZ(i);
-                float partZ = i.screenuv.z;
-                float diff = sceneZ - partZ;
-                float intersect = saturate(pow(_FadeLength * 2, 5) * diff);
-                float test = lerp(i.uv, _BaseColor, intersect);
-
-                return col;
-            }
-            ENDCG
-        }
-
-        // Intersection
-        Pass {
-            
-            Cull Front
-            ZTest Greater
-
-            CGPROGRAM
-            #include "BombGeneral.cginc"
-
-            v2f vert (appdata v) {
-                v2f o = generalVert(v);
-                return o;
-            }
-
-            fixed4 frag (v2f i) : SV_Target {
-
-                showAtScale(1); // Show when object is positive size
-                
-                fixed4 col = _IntersectColor2;
-
-                // Adjust height
-                float height = pow((_Height + 10) / 10, 5); // Recalculate height
-                float rimEffect = (1. - saturate(abs(i.uv.y - 0.5) * height));
-                clip(rimEffect - 0.0001);
-                col.a *= rimEffect;
-
-                float sceneZ = getSceneZ(i);
-                float partZ = i.screenuv.z;
-                float diff = sceneZ - partZ;
-                float intersect = saturate(pow(_FadeLength * 2, 5) * diff);
-                float test = lerp(i.uv, fixed4(0, 0, 0, 1), intersect);
-                
-                col.a *= test;
-
-                return col;
-            }
-            ENDCG
-        }
-
         // Cones
         Pass {
             
@@ -230,6 +161,7 @@ Shader "Unlit/Bomb" {
                 float fresnel = 3 + 3.5 * pow(dot(f, i.normal), 3);
                 fresnel = saturate(lerp(0, 1, 1-fresnel));
                 col += fresnel;
+                col.rgb /= 2;
 
                 return col;
             }
@@ -250,6 +182,7 @@ Shader "Unlit/Bomb" {
                 float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
                 v.vertex += v.normal * dispVal;
+                v.vertex *= sin(v.normal * _Time.y) * .05 + 1;
 
                 v2f o = generalVert(v);
                 return o;
@@ -264,12 +197,12 @@ Shader "Unlit/Bomb" {
 
                 float3 scale = getScale();
                 float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 10 / scale);
-                col += softNoiseTex * .5 ;
+                col += softNoiseTex * .5;
                 col *= (.3, .3, .3, 1);
 
 				float3 f = normalize(i.viewDir);
 				float fresnel = 4 + -.5 * pow(1 + dot(f, i.normal), 3.5);
-                fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5 - unity_ObjectToWorld);
+                fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5);
                 col += fresnel;
 
                 return col;
@@ -292,6 +225,7 @@ Shader "Unlit/Bomb" {
                 float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
                 v.vertex += v.normal * dispVal;
+                v.vertex *= sin(v.normal * _Time.y) * .05 + 1;
 
                 v2f o = generalVert(v);
                 return o;
@@ -301,24 +235,25 @@ Shader "Unlit/Bomb" {
                 
                 showAtScale(-1); // Show when object is negative size
                 
-                float4 col = fixed4(1, 1, 1, 1);
-
+                // Make smoke layers
+                float4 smokeLayers = .1;
                 for (int ii = 1; ii < 3; ii++) {
                     float smoke = tex2D(_SoftNoiseTex, i.uv * (ii * 2) + _Time.x);
-                    float color = ii / 10;
-                    col *= fixed4(color, color, color, smoke);
+                    float4 grey = ii / 10;
+                    grey.a = smoke;
+                    smokeLayers += grey;
                 }
+                smokeLayers.a += .2;
+                float4 col = smokeLayers;
                 
-                float blackout = tex2D(_HardNoiseTex, i.normalDir + _Time.x);
-                col.a *= blackout * .5;
-                col.a += .1;
+                float flashing = tex2D(_HardNoiseTex, i.postNormal / 1000 + _Time.x);
+                col.a += flashing;
                 
                 return col;
             }
             ENDCG
         }
         
-
         // Bloom
         Pass {
             
@@ -340,7 +275,7 @@ Shader "Unlit/Bomb" {
 
             fixed4 frag (v2f i) : SV_Target {
                 
-                float preTest = unity_ObjectToWorld < -.01 && unity_ObjectToWorld > -.2;
+                float preTest = unity_ObjectToWorld < .1 && unity_ObjectToWorld > -.2;
                 clip(preTest - 0.00001);
                 
                 float4 col = _BaseColor;
@@ -351,7 +286,7 @@ Shader "Unlit/Bomb" {
                 col.a = fresnel;
                 fresnel = saturate(lerp(_BaseColor, fixed4(1, 1, 1, 1), fresnel));
                 col.rgb += pow(fresnel, 10) * 10;
-                
+
                 return col;
             }
             ENDCG
