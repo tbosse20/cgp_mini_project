@@ -31,7 +31,7 @@ Shader "Unlit/Bomb" {
         Cull Off
         ZWrite Off
 
-        // Inside surface
+        // Disc surface
         Pass {
             
             Cull Front
@@ -76,48 +76,11 @@ Shader "Unlit/Bomb" {
                 col.a += lightning * .4;
 
                 col.a *= distance(i.normal.xz, 0) - scale / 100; // Center gradient
-                // float radiusLines = (frac(i.uv * 50) < 0.15); // Lines outwards
-                // float fresnel = dot(i.worldNormal, i.viewDir) / 50; // Fresnel
-                
-                col.a *= lerp(1, 0, saturate(scale.x - 10)); // Lerp to invisible when larger than 10
-
                 col.a *= .7; // Half opacity of pass
-
-                return col;
-            }
-            ENDCG
-        }
-
-        // Outside rim
-        Pass {
-            
-            CGPROGRAM
-            #include "BombGeneral.cginc"
-
-            v2f vert (appdata v) {
-                v.vertex.y = 0;
-                v2f o = generalVert(v);
-                return o;
-            }
-
-            fixed4 frag (v2f i) : SV_Target {
                 
-                float3 scale = getScale(); // Get scale of object
-                showAtScale(1); // Show when object is positive size
-                
-                float4 col = _BaseColor; // Set base color
-
                 // Adjust height
-                float rimEffect = (-distance(i.normal.y, 0)) + _Height;
-                clip(rimEffect - 0.0001);
-                col.a *= rimEffect;
-                
-                // Noise texture pulsing with high contrast
-                float noiseTexture = tex2D(_HardNoiseTex, i.normal.xz * scale);
-                noiseTexture = pow(noiseTexture * 10, 10);
-
-                col.rgb += noiseTexture;
-                col.a = pow(col.a, 10);
+                float outerRim = 1 - saturate(pow(distance(i.normal.y, 0) + _Height, 10));
+                col.rgb += pow(outerRim, 10);
 
                 col.a *= lerp(1, 0, saturate(scale - 10)); // Lerp to invisible when larger than 10
 
@@ -155,13 +118,12 @@ Shader "Unlit/Bomb" {
                 showAtScale(-1); // Show when object is negative size
                 
                 float4 col = _BaseColor;
-                col.a = .4;
 
 				float3 f = normalize(ObjSpaceViewDir(i.normal));
                 float fresnel = 3 + 3.5 * pow(dot(f, i.normal), 3);
                 fresnel = saturate(lerp(0, 1, 1-fresnel));
                 col += fresnel;
-                col.rgb /= 2;
+                col.rgb *= .5;
 
                 return col;
             }
@@ -190,51 +152,12 @@ Shader "Unlit/Bomb" {
 
             fixed4 frag (v2f i) : SV_Target {
                 
+                float3 scale = getScale();
                 showAtScale(-1); // Show when object is negative size
                 
                 float4 col = _BaseColor; // Set base color
                 col.a = .4;
 
-                float3 scale = getScale();
-                float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 10 / scale);
-                col += softNoiseTex * .5;
-                col *= (.3, .3, .3, 1);
-
-				float3 f = normalize(i.viewDir);
-				float fresnel = 4 + -.5 * pow(1 + dot(f, i.normal), 3.5);
-                fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5);
-                col += fresnel;
-
-                return col;
-            }
-            ENDCG
-        }
-        
-
-        // Windup smoke
-        Pass {
-            
-            Cull Off
-
-            CGPROGRAM
-            #include "BombGeneral.cginc"
-
-            v2f vert (appdata v) {
-                
-                float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
-                float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
-                dispVal *= sin(unity_ObjectToWorld);
-                v.vertex += v.normal * dispVal;
-                v.vertex *= sin(v.normal * _Time.y) * .05 + 1;
-
-                v2f o = generalVert(v);
-                return o;
-            }
-
-            fixed4 frag (v2f i) : SV_Target {
-                
-                showAtScale(-1); // Show when object is negative size
-                
                 // Make smoke layers
                 float4 smokeLayers = .1;
                 for (int ii = 1; ii < 3; ii++) {
@@ -244,11 +167,18 @@ Shader "Unlit/Bomb" {
                     smokeLayers += grey;
                 }
                 smokeLayers.a += .2;
-                float4 col = smokeLayers;
-                
                 float flashing = tex2D(_HardNoiseTex, i.postNormal / 1000 + _Time.x);
-                col.a += flashing;
-                
+                smokeLayers += flashing;
+                col *= smokeLayers;
+
+                float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 5);
+                col += softNoiseTex * .5;
+
+				float3 f = normalize(i.viewDir);
+				float fresnel = 4 + -.5 * pow(1 + dot(f, i.normal), 3.5);
+                fresnel = saturate(lerp(0, 1, 1 - fresnel) * .5);
+                col += fresnel;
+
                 return col;
             }
             ENDCG
