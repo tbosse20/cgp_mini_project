@@ -12,7 +12,6 @@ struct v2f {
     float2 uv : TEXCOORD0;
     float4 vertex : SV_POSITION;
     half4 normal : TEXCOORD1;
-    half4 postNormal : TEXCOORD2;
     half3 viewDir : POSITION1;
 };
 
@@ -24,16 +23,11 @@ float4 _HardNoiseTex_ST;
 sampler2D _SoftNoiseTex;
 float4 _SoftNoiseTex_ST;
 
-sampler2D _CameraDepthTexture;
-
-float _Test;
-float _Test2;
 
 v2f generalVert (appdata v) {
     v2f o;
 
     o.vertex = UnityObjectToClipPos(v.vertex);
-    o.postNormal = v.normal;
     o.viewDir = ObjSpaceViewDir(v.vertex);
 
     o.normal = v.normal;
@@ -47,14 +41,6 @@ float3 getScale() {
         length(unity_ObjectToWorld._m00_m10_m20),
         length(unity_ObjectToWorld._m01_m11_m21),
         length(unity_ObjectToWorld._m02_m12_m22));
-}
-
-float getSceneZ(v2f i) {
-    return LinearEyeDepth(
-        SAMPLE_DEPTH_TEXTURE_PROJ(
-            _CameraDepthTexture,
-            UNITY_PROJ_COORD(i.screenuv)
-            ));
 }
 
 void showAtScale(float scaleTarget) {
