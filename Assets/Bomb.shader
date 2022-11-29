@@ -13,11 +13,7 @@ Shader "Unlit/Bomb" {
 
     SubShader {
         
-        Tags {
-            "RenderType" = "Transparent"
-            "Queue" = "Transparent"
-            }
-    
+        Tags { "RenderType" = "Transparent" "Queue" = "Transparent" }
         Blend SrcAlpha OneMinusSrcAlpha     // Transparency properties
         Cull Off                            // Render both mesh sides
         ZWrite Off
@@ -36,14 +32,15 @@ Shader "Unlit/Bomb" {
                 return o; 
             }
 
-            // Make noise 
+            // Make animation and highlights
             float makeNoise(v2f i, float text) {
-                float noise = 0;
-                noise += pow(text, 2);
-                noise += sin((distance(i.normal.xz, 0) + .5 * -_Time.y) * 10) * .2;
-                noise += sin(i.uv.y * _Time.y * .01) * .1;
-                noise += saturate(sin(text * sin(_Time.y * .5 + .5)) * 2);
-                noise *= pow(text, 5) * 10;
+
+                float noise = 0; // Initialize float for noise
+                noise += pow(text, 2); // Static highlights
+                noise += sin((distance(i.normal.xz, 0) + .5 * -_Time.y) * 10) * .2; // From center outgoing pulse
+                noise += saturate(sin(text * sin(_Time.y * .5 + .5)) * 2); // Over all pulse
+                noise *= pow(text, 5) * 10; // Highlight texture 
+
                 return noise;
             }
 
@@ -59,13 +56,13 @@ Shader "Unlit/Bomb" {
                 lightning = makeNoise(i, lightning); // Make noise on texture
                 float softNoiseTex = tex2D(_SoftNoiseTex, i.normal.xz * scale * 3); // Convert texture w/ scale
                 lightning *= saturate(softNoiseTex * 2); // Increase soft texture values
-                col.a += lightning * .4;
+                col.a += lightning * .4; // Decrese texture lightning and add to main alpha
 
                 col.a *= distance(i.normal.xz, 0) - scale / 100; // Center gradient
                 col.a *= .7; // Half opacity of pass
                 
-                // Adjust height
-                float outerRim = 1 - saturate(pow(distance(i.normal.y, 0) + _Height, 10)); // Utilize outer center distance
+                // White outer rim 
+                float outerRim = 1 - saturate(pow(distance(i.normal.y, 0) + _Height, 10)); // Utilize center distance
                 col.rgb += pow(outerRim, 10); // Increase highlights
 
                 col.a *= lerp(1, 0, saturate(scale - 10)); // Lerp to invisible when larger than 10
@@ -140,7 +137,9 @@ Shader "Unlit/Bomb" {
 				float3 viewDir = normalize(i.viewDir); // Normalize view direction vector
 				float fresnel = 4 + -.5 * pow(1 + dot(viewDir, i.normal), 3.5); // Fresnel
                 fresnel = (1 - fresnel) * .5; // Invert fresnel
-                col += fresnel; // Add fresnel to main color
+                col.a += fresnel; // Add fresnel to main alpha
+                col.rgb += pow(fresnel, 2); // Highlight fresnel and add to main rgb values
+
 
                 // Make smoke layers
                 float4 smokeLayers = 0; // Make black texture

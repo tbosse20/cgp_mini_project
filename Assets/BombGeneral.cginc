@@ -23,13 +23,11 @@ float4 _HardNoiseTex_ST;
 sampler2D _SoftNoiseTex;
 float4 _SoftNoiseTex_ST;
 
-
 v2f generalVert (appdata v) {
     v2f o;
 
     o.vertex = UnityObjectToClipPos(v.vertex);
     o.viewDir = ObjSpaceViewDir(v.vertex);
-
     o.normal = v.normal;
     o.uv = v.uv;
 
@@ -46,10 +44,4 @@ float3 getScale() {
 void showAtScale(float scaleTarget) {
     float preTest = scaleTarget * unity_ObjectToWorld > 0;
     clip(preTest - 0.00001);
-}
-
-void showAtScale(float scaleTarget, float startTarget) {
-    float preTest = scaleTarget * unity_ObjectToWorld > startTarget;
-    clip(preTest - 0.00001);
-}
-                
+}      
