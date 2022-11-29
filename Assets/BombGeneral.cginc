@@ -1,5 +1,3 @@
-// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
-
 #pragma vertex vert
 #pragma fragment frag
 #include "UnityCG.cginc"
@@ -14,46 +12,28 @@ struct v2f {
     float2 uv : TEXCOORD0;
     float4 vertex : SV_POSITION;
     half4 normal : TEXCOORD1;
-    half4 postNormal : TEXCOORD17;
-
+    half4 postNormal : TEXCOORD2;
     half3 viewDir : POSITION1;
-    float3 normalDir : TEXCOORD2;
-    float2 uvTexture : TEXCOORD3;
-    float4 screenuv : TEXCOORD4;
-    float4 worldPos : TEXCOORD5;
-    float3 worldNormal : TEXCOORD6;
-    float4 screenPos : TEXCOORD7;
 };
 
 float4 _BaseColor;
+float _Height;
 
 sampler2D _HardNoiseTex;
 float4 _HardNoiseTex_ST;
 sampler2D _SoftNoiseTex;
 float4 _SoftNoiseTex_ST;
 
-float _Height; 
-
-float4 _IntersectColor;
-float4 _IntersectColor2;
-float _FadeLength;
-
 sampler2D _CameraDepthTexture;
 
-float _Test; 
-float _Test2; 
+float _Test;
+float _Test2;
 
 v2f generalVert (appdata v) {
     v2f o;
 
     o.vertex = UnityObjectToClipPos(v.vertex);
     o.postNormal = v.normal;
-
-    o.screenuv = ComputeScreenPos(o.vertex);
-    COMPUTE_EYEDEPTH(o.screenuv.z);
-    o.worldNormal = mul(unity_ObjectToWorld, v.normal).xyz;
-    o.worldPos = mul(unity_ObjectToWorld, v.uv);
-    o.uvTexture = TRANSFORM_TEX(v.uv, _SoftNoiseTex);
     o.viewDir = ObjSpaceViewDir(v.vertex);
 
     o.normal = v.normal;

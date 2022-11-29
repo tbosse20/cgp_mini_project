@@ -7,17 +7,12 @@
 Shader "Unlit/Bomb" {
     Properties {
         _BaseColor ("Base color", Color) = (.09, .8, .8, 1)
-        _IntersectColor ("Intersect color", Color) = (0, 0, .7, 1)
-        _IntersectColor2 ("Intersect color", Color) = (0, 0, .7, 1)
         _Height ("Height", range(0, 1)) = .25
-        _Intensity ("Intensity", range(0, 50)) = 15.0
-        _FadeLength ("Fade length", float) = 10.0
         [NoScaleOffset] _HardNoiseTex("Hard noise", 2D) = "white" {}
         [NoScaleOffset] _SoftNoiseTex("Soft noise", 2D) = "white" {}
 
         _Test("Test float", float) = 1.0
         _Test2("Test float 2", float) = 1.0
-
     }
 
     SubShader {
@@ -27,7 +22,7 @@ Shader "Unlit/Bomb" {
             "Queue" = "Transparent"
             }
     
-        Blend SrcAlpha OneMinusSrcAlpha 
+        Blend SrcAlpha OneMinusSrcAlpha
         Cull Off
         ZWrite Off
 
@@ -139,7 +134,6 @@ Shader "Unlit/Bomb" {
             #include "BombGeneral.cginc"
 
             v2f vert (appdata v) {
-                
                 float4 dispTexCol = tex2Dlod(_SoftNoiseTex, v.uv);
                 float dispVal = dot(float3(0.1, 0.1, 0.1), dispTexCol.rgb);
                 dispVal *= sin(unity_ObjectToWorld);
