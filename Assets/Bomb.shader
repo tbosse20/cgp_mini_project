@@ -144,7 +144,6 @@ Shader "Unlit/Bomb" {
                 col.a += fresnel; // Add fresnel to main alpha
                 col.rgb += pow(fresnel, 2); // Highlight fresnel and add to main rgb values
 
-
                 // Make smoke layers
                 float4 smokeLayers = 0; // Make black texture
                 // Add multiple noise textures with different size, color-values, and alpha
