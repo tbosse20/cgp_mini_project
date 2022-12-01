@@ -97,12 +97,16 @@ Shader "Unlit/Bomb" {
                 
                 showAtScale(-1); // Show when object is negative size
                 float4 col = _BaseColor; // Set base color
+                col.rgb *= .5; // Decrease color
+                col.a *= .2; // Decrease alpha
+
+                float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 2);
+                col += softNoiseTex * .5;
 
                 // Make fresnel inside cones from white to main color
 				float3 viewDir = normalize(i.viewDir); // Normalize view direction vector
                 float fresnel = saturate(1 - (3 + 3.5 * pow(dot(viewDir, i.normal), 3))); // Fresnel inner light
                 col += fresnel; // Add fresnel to color
-                col.rgb *= .5; // Decrease color 
 
                 return col;
             }
@@ -157,6 +161,9 @@ Shader "Unlit/Bomb" {
                 smokeLayers += flashing; // Add flash effect to layers
                 col *= smokeLayers; // Multiply smoke layers with flash to main color
 
+                float softNoiseTex = tex2D(_SoftNoiseTex, i.uv * 5);
+                col.rgb += softNoiseTex * .7;
+                
                 col.a = saturate(col.a * 1.5); // Adjust alpha to fit 0 - 1, to avoid overlap
 
                 return col;
@@ -176,13 +183,17 @@ Shader "Unlit/Bomb" {
                 float dist = length(ObjSpaceViewDir(v.vertex)); // Get camera to object distance
                 dist = min(abs(unity_ObjectToWorld) * 1000, dist * 2); // Pick smallest size or distance 
                 v.vertex *= dist; // Change vertex positions depending on picked distance
+                
+                float dispVal = tex2Dlod(_HardNoiseTex, v.uv); // Convert texture
+                v.vertex += v.normal * dispVal; // Extrude vertex by normal realtive to diplacement value 
+                v.vertex *= sin(v.normal * _Time.y * 10) * .05 + 1; // Pulse by normals
 
                 v2f o = generalVert(v); // Get general vert
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target {
-                
+
                 // Show only when between -0.2 and 0.1
                 float preTest = unity_ObjectToWorld < .1 && unity_ObjectToWorld > -.2;
                 clip(preTest - 0.00001);
